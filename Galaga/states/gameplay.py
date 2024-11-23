@@ -29,6 +29,8 @@ from bezier.path_point_calculator import PathPointCalculator
 from bezier.control_handler_mover import ControlHandlerMover
 from bezier.path_point_selector import PathPointSelector
 
+import json
+
 ADDENEMY = pygame.USEREVENT + 1
 ENEMYSHOOTS = pygame.USEREVENT + 2
 FREEZE = pygame.USEREVENT + 3
@@ -40,6 +42,9 @@ class Gameplay(BaseState):
         pygame.time.set_timer(ADDENEMY, 450)
         pygame.time.set_timer(ENEMYSHOOTS, 1000)
         pygame.time.set_timer(FREEZE, 2000)
+
+        self.high_score_file = "highscore.json"  # Caminho do arquivo JSON
+        self.high_score = self.load_high_score()  # Carrega o HighScore do arquivo
 
         self.rect = pygame.Rect((0, 0), (80, 80))
         self.next_state = "GAME_OVER"
@@ -70,7 +75,6 @@ class Gameplay(BaseState):
         self.enemies = 0
         self.number_of_enemies = 13
         self.score = 0
-        self.high_score = 0
         self.freeze = False
 
         self.all_enemies = pygame.sprite.Group()
@@ -80,6 +84,24 @@ class Gameplay(BaseState):
         self.kill_sound = pygame.mixer.Sound("./assets/sounds/kill.mp3")
         self.show_control: bool = False
         self.mover.align_all()
+
+
+    def load_high_score(self) -> int:
+        """Carrega o HighScore do arquivo JSON."""
+        try:
+            with open(self.high_score_file, "r") as file:
+                data = json.load(file)
+                return data.get("high_score", 0)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return 0  # Retorna 0 se o arquivo não existir ou estiver corrompido
+
+    def save_high_score(self) -> None:
+        """Salva o HighScore no arquivo JSON."""
+        try:
+            with open(self.high_score_file, "w") as file:
+                json.dump({"high_score": self.high_score}, file)
+        except IOError:
+            print("Erro ao salvar o HighScore no arquivo.")
 
     def startup(self) -> None:
         pygame.mixer.music.load("./assets/sounds/02 Start Music.mp3")
@@ -223,7 +245,8 @@ class Gameplay(BaseState):
             for key in result:
                 self.score += 120
                 if self.score > self.high_score:
-                    self.high_score = self.score
+                    self.high_score = self.score  # Atualiza o HighScore
+                    self.save_high_score()  # Salva o novo HighScore no arquivo
                 self.all_sprites.add(
                     Explosion(self.explosion_sprites, key.rect[0], key.rect[1])
                 )
